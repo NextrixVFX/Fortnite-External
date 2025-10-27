@@ -2,12 +2,13 @@
 
 #include "offsets.hpp"
 #include "../features/util/util.hpp"
-#include "../../memory/memory.hpp"
+
 #include "../config.h"
 
 #include <memory>
 #include <cstdint>
 #include <d3dx9math.h>
+#include <numbers>
 
 namespace PtrCache
 {
@@ -21,7 +22,7 @@ namespace PtrCache
 	inline uintptr_t PlayerController = 0;
 	inline uintptr_t CameraLocation = 0;
 	inline uintptr_t CameraRotation = 0;
-	inline uintptr_t viewMatrix = 0;
+	inline Engine::tarray<uintptr_t> viewMatrix;
 	inline uintptr_t viewState = 0;
 
 	inline Engine::Camera* vCamera = nullptr;
@@ -76,15 +77,8 @@ namespace sdk
 
 	inline auto isVisible(uintptr_t Mesh) -> bool
 	{
-		if (!Mesh)
-			return false;
-
 		double Seconds = _Memory->Read<double>(PtrCache::Gworld + 0x198); // UWorld::LastRenderTime
 		float LastRenderTime = _Memory->Read<float>(Mesh + 0x32C); // UPrimitiveComponent::LastRenderTimeOnScreen
-
-		if (!Seconds || !LastRenderTime)
-			return false;
-
 		return (Seconds - LastRenderTime <= 0.06f);
 	}
 
@@ -113,77 +107,36 @@ namespace sdk
 		return Vector3(Matrix._41, Matrix._42, Matrix._43);
 	}
 	
-	// Eular Angles
-	
 	inline auto GetViewAngles() -> Engine::Camera
 	{
 		Engine::Camera cam;
-
-		Vector3 mProjection = _Memory->ReadBuffer<Vector3>(PtrCache::viewState + 0x940);
-		double yUnit = _Memory->ReadBuffer<Vector3>(PtrCache::CameraRotation + 0x48).y; // 0 - 1 vert
 		
-		cam.Rotation.x = std::asin(yUnit) * 180.0f / M_PI;
-		cam.Rotation.y = std::atan2(-mProjection.x, mProjection.y) * 180.0f / M_PI;
+		const Engine::tarray<uintptr_t> ViewStates = PtrCache::viewMatrix;
+		if (!ViewStates.is_valid())
+			return {};
+
+		const uintptr_t View = ViewStates.get(_Memory, 1);
+		if (!View)
+			return {};
+
+		const double fovAxis = _Memory->ReadBuffer < double >(View + 0x740);
+		const Engine::fmatrix Projection = _Memory->ReadBuffer<Engine::fmatrix>(View + 0x940);
+		
+		cam.Rotation.x = std::asin(max(-1.0f, min(1.0f, Projection.z_plane.w))) * 180.0f / M_PI;
+		cam.Rotation.y = std::atan2(Projection.y_plane.w, Projection.x_plane.w) * 180.0f / M_PI;
 		cam.Rotation.z = 0.0;
 
-		float gotFov = static_cast<float>(_Memory->Read<double>(PtrCache::viewState + 0x740));
-		float fovRadians = 2.0f * std::atanf(1.0f / gotFov);
-		cam.FieldOfView = gotFOV;
-		cam.Location = _Memory->ReadBuffer<Vector3>(PtrCache::CameraLocation);
-		
-		//std::cout << "Def:\t" << gotFov << " : " << "Rad:\t" << fovRadians << " : " << "Deg:\t" << fovRadians * 180.0f / M_PI << std::endl;
+		//cam.Location = _Memory->ReadBuffer<Vector3>(PtrCache::CameraLocation);
+		cam.Location.x = Projection.m[3][0];
+		cam.Location.y = Projection.m[3][1];
+		cam.Location.z = Projection.m[3][2];
 
+		const float fovRadians = 2.0f * std::atanf(1.0f / static_cast<float>(fovAxis));
+		cam.FieldOfView = fovRadians * 180.0f / M_PI;
+		
 		return cam;
 	}
 	
-	/*
-	inline auto GetViewAngles() -> Engine::Camera
-	{
-		Engine::Camera cam;
-
-		Vector3 Direction = _Memory->ReadBuffer<Vector3>(PtrCache::CameraRotation);
-		double yUnit = _Memory->ReadBuffer<Vector3>(PtrCache::CameraRotation + 0x48).y;
-
-		D3DXVECTOR3 forward((float)Direction.x, (float)yUnit, (float)Direction.z);
-		D3DXVec3Normalize(&forward, &forward);
-
-		D3DXVECTOR3 up(0.0f, 1.0f, 0.0f);
-
-		D3DXVECTOR3 right;
-		D3DXVec3Cross(&right, &up, &forward);
-		D3DXVec3Normalize(&right, &right);
-
-		D3DXVECTOR3 trueUp;
-		D3DXVec3Cross(&trueUp, &forward, &right);
-		D3DXVec3Normalize(&trueUp, &trueUp);
-
-		// Build view basis
-		D3DXMATRIX rotation;
-		rotation._11 = right.x;   rotation._12 = right.y;   rotation._13 = right.z;   rotation._14 = 0.0f;
-		rotation._21 = trueUp.x;  rotation._22 = trueUp.y;  rotation._23 = trueUp.z;  rotation._24 = 0.0f;
-		rotation._31 = forward.x; rotation._32 = forward.y; rotation._33 = forward.z; rotation._34 = 0.0f;
-		rotation._41 = 0.0f;      rotation._42 = 0.0f;      rotation._43 = 0.0f;      rotation._44 = 1.0f;
-
-		D3DXQUATERNION quat;
-		D3DXQuaternionRotationMatrix(&quat, &rotation);
-
-		cam.Rotation.x = atan2(2.0 * (quat.w * quat.x + quat.y * quat.z),
-			1.0 - 2.0 * (quat.x * quat.x + quat.y * quat.y)) * (180.0 / M_PI);
-
-		cam.Rotation.y = asin(2.0 * (quat.w * quat.y - quat.z * quat.x)) * (180.0 / M_PI);
-
-		cam.Rotation.z = atan2(2.0 * (quat.w * quat.z + quat.x * quat.y),
-			1.0 - 2.0 * (quat.y * quat.y + quat.z * quat.z)) * (180.0 / M_PI);
-
-		util::PrintV3("Rotation:\t", cam.Rotation);
-		std::cout << std::endl;
-
-		cam.Location = _Memory->ReadBuffer<Vector3>(PtrCache::CameraLocation);
-		cam.FieldOfView = static_cast<float>(gotFOV);
-
-		return cam;
-	}
-	*/
 
 	inline auto ProjectWorldToScreen(Vector3 WorldLocation, Engine::Camera* vCamera) -> Vector2
 	{
@@ -258,9 +211,7 @@ namespace sdk
 
 			PtrCache::CameraRotation = _Memory->Read<uintptr_t>(PtrCache::Gworld + 0x188);
 
-			PtrCache::viewMatrix = _Memory->Read<uintptr_t>(PtrCache::LocalPlayers + 0xD0);
-
-			PtrCache::viewState = _Memory->Read<uintptr_t>(PtrCache::viewMatrix + 0x8);
+			PtrCache::viewMatrix = _Memory->ReadBuffer<Engine::tarray<uintptr_t>>(PtrCache::LocalPlayers + 0xD0);
 
 			Engine::Camera angles = sdk::GetViewAngles();
 

@@ -1,7 +1,10 @@
 #pragma once
 
+#include "../../memory/memory.hpp"
 #include <d3d9types.h>
 #include <corecrt_math.h>
+#include "math.hpp"
+
 
 class Vector2
 {
@@ -78,6 +81,84 @@ inline static float rad2deg2 = (float)M_PI / 180.0f;
 
 namespace Engine
 {
+
+	template < class type >
+	class tarray
+	{
+	public:
+		tarray() : data(), count(), maximum_count() {}
+		tarray(type* data, std::uint32_t count, std::uint32_t max_count) : data(data), count(count), maximum_count(max_count) {}
+
+		[[nodiscard]] __forceinline type get(std::shared_ptr<driver::c_Memory> driver, std::uintptr_t idx) const noexcept
+		{
+			return driver->Read < type >(
+				std::bit_cast <std::uintptr_t> (this->data) + (idx * sizeof(type))
+			);
+		}
+
+		[[nodiscard]] __forceinline std::uint32_t size() const noexcept
+		{
+			return this->count;
+		}
+
+		[[nodiscard]] __forceinline std::uint32_t max_size() const noexcept
+		{
+			return this->maximum_count;
+		}
+
+		[[nodiscard]] __forceinline bool is_valid_index(std::int32_t index) const noexcept
+		{
+			return index >= 0 && index < static_cast <int>(count);
+		}
+
+		[[nodiscard]] __forceinline bool is_valid() const noexcept
+		{
+			return this->data != nullptr;
+		}
+
+		type* data;
+		std::uint32_t count;
+		std::uint32_t maximum_count;
+	};
+
+	struct alignas (16) matrix_elements
+	{
+		double m11, m12, m13, m14;
+		double m21, m22, m23, m24;
+		double m31, m32, m33, m34;
+		double m41, m42, m43, m44;
+
+		matrix_elements() :
+			m11(0), m12(0), m13(0), m14(0),
+			m21(0), m22(0), m23(0), m24(0),
+			m31(0), m32(0), m33(0), m34(0),
+			m41(0), m42(0), m43(0), m44(0) {
+		}
+	};
+
+	struct alignas (16) dbl_matrix
+	{
+		union
+		{
+			matrix_elements elements;
+			double m[4][4];
+		};
+
+		dbl_matrix() : elements() {}
+
+		[[nodiscard]] inline double& operator ( ) (std::size_t row, std::size_t col) noexcept { return m[row][col]; }
+		[[nodiscard]] inline const double& operator ( ) (std::size_t row, std::size_t col) const noexcept { return m[row][col]; }
+	};
+
+	struct alignas (16) fmatrix : public dbl_matrix
+	{
+		primitives::fplane x_plane;
+		primitives::fplane y_plane;
+		primitives::fplane z_plane;
+		primitives::fplane w_plane;
+
+		fmatrix() : dbl_matrix(), x_plane(), y_plane(), z_plane(), w_plane() {}
+	};
 
 	struct Entity
 	{

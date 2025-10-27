@@ -47,14 +47,12 @@ namespace features
 
 		inline auto onRender() -> void
 		{
-			// https://fn.dumps.host/?class=UWorld&member=GameState
 			// check if not ina loading screen
 			uintptr_t GameState = Memory->Read<uintptr_t>(PtrCache::Gworld + Offsets::GameState);
 			
 			if (!GameState)
 				return;
 
-			// https://fn.dumps.host/?class=AGameStateBase&member=PlayerArray
 			// get a pointer to the array of players in the game
 			uintptr_t PlayerArray = Memory->Read<uintptr_t>(GameState + Offsets::PlayerArray);
 

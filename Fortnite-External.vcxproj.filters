@@ -632,6 +632,9 @@
     <ClInclude Include="src\lib\serial\v8stdint.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\modules\sdk\math.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="src\assembly.asm">

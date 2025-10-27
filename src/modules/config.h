@@ -22,5 +22,5 @@ inline static float lineColor[4] = { 0.0f, 255.0f, 0.0f, 255.0f };
 namespace SerialConfig
 {
 	inline static int BaudRate = 9600;
-	inline static std::string_view ComPort = "COM9";
+	inline static std::string_view ComPort = "COM10";
 }

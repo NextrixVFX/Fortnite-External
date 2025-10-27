@@ -119,7 +119,7 @@ namespace driver {
             return kernel->read(address);
         }
 
-        template<typename ret_t = std::uintptr_t, typename addr_t>
+        template<typename ret_t, typename addr_t>
         ret_t ReadBuffer(addr_t address)
         {
             ret_t buffer{};
