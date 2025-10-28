@@ -18,10 +18,13 @@ namespace features
 		bool isInitialized = false;
 		inline static SerialInput::c_Mouse Mouse = SerialInput::c_Mouse(SerialConfig::ComPort, SerialConfig::BaudRate);
 
-		c_Softaim(std::shared_ptr<ui::c_render> _Renderer, std::shared_ptr<driver::c_Memory> _Memory)
+		c_Softaim(std::weak_ptr<ui::c_render> _Renderer, std::weak_ptr<driver::c_Memory> _Memory)
 		{
-			Renderer = _Renderer;
-			Memory = _Memory;
+			if (!(Renderer = _Renderer.lock()))
+				return;
+
+			if (!(Memory = _Memory.lock()))
+				return;
 
 			isInitialized = true;
 		}

@@ -5,14 +5,14 @@ namespace features
 	class c_ESP
 	{
 	private:
-        std::shared_ptr<ui::c_render> Renderer = nullptr;
-		std::shared_ptr<driver::c_Memory> Memory = nullptr;
+        std::shared_ptr<ui::c_render> Renderer;
+		std::shared_ptr<driver::c_Memory> Memory;
 
 		inline auto DrawCornerBox(float X, float Y, float W, float H, const ImColor color, float thickness) -> void
 		{
 			float lineW = (W / 3);
 			float lineH = (H / 3);
-
+			
 			Renderer->Line(X, Y, X, Y + lineH, color, thickness);
 			Renderer->Line(X, Y, X + lineW, Y, color, thickness);
 			Renderer->Line(X + W - lineW, Y, X + W, Y, color, thickness);
@@ -27,10 +27,13 @@ namespace features
 		
         bool isInitialized = false;
 
-		c_ESP(std::shared_ptr<ui::c_render> _Rendering, std::shared_ptr<driver::c_Memory> _Memory)
+		c_ESP(std::weak_ptr<ui::c_render> _Renderer, std::weak_ptr<driver::c_Memory> _Memory)
 		{
-			Renderer = _Rendering;
-			Memory = _Memory;
+			if (!(Renderer = _Renderer.lock()))
+				return;
+
+			if (!(Memory = _Memory.lock()))
+				return;
 
 			isInitialized = true;
 		}
@@ -40,18 +43,15 @@ namespace features
 			isInitialized = false;
 		}
 
-		// Runs in render thread
 		inline auto onRender() -> void
 		{
-			if (!this->isInitialized)
-				return;
-
+			// we can loop through again because adding to the draw list is cheap
 			for (int i = 0; i <= PtrCache::Entities.Size(); i++)
 			{
-				Engine::Entity Target{};
+				Engine::Entity Target;
 				if (!PtrCache::Entities.Get(i, Target))
 					continue;
-				
+
 				Vector2 Head2D = Target.HeadBonePos2D;
 				Vector2 Bottom2D = Target.RootBonePos2D;
 
@@ -99,28 +99,19 @@ namespace features
 			if (!this->isInitialized)
 				return;
 
-			// check if not ina loading screen
-			uintptr_t GameState = Memory->Read<uintptr_t>(PtrCache::Gworld + Offsets::GameState);
-
-			if (!GameState)
+			if (!PtrCache::GameState)
 				return;
 
-			// get a pointer to the array of players in the game
-			uintptr_t PlayerArray = Memory->Read<uintptr_t>(GameState + Offsets::PlayerArray);
-
-			// get how much players are in the game
-			int PlayerList = Memory->ReadBuffer<int>(GameState + (Offsets::PlayerArray + sizeof(uintptr_t)));
-
-			if (!PlayerList)
+			if (!PtrCache::PlayerList)
 				sdk::boneCache.Clear();
 
 			float ClosestDistance = FLT_MAX;
 
 			Engine::Entity Target{};
 
-			for (int i = 0; i < PlayerList; i++)
+			for (int i = 0; i < PtrCache::PlayerList; i++)
 			{
-				Target.PlayerState = Memory->Read<uintptr_t>(PlayerArray + (i * sizeof(uintptr_t)));
+				Target.PlayerState = Memory->Read<uintptr_t>(PtrCache::PlayerArray + (i * sizeof(uintptr_t)));
 
 				if (!Target.PlayerState)
 					continue;
@@ -147,8 +138,8 @@ namespace features
 
 				// Data
 				Target.CurrentWeapon = Memory->Read<uintptr_t>(Target.Pawn + Offsets::CurrentWeapon);
-				Target.isDying = (Memory->Read<char>(Target.Pawn + Offsets::isDying) >> 4) & 1;
-				Target.isDowned = (Memory->Read<char>(Target.Pawn + Offsets::isDBNO) >> 4) & 1;
+				Target.isDying = (Memory->ReadBuffer<char>(Target.Pawn + Offsets::isDying) >> 4) & 1;
+				Target.isDowned = (Memory->ReadBuffer<char>(Target.Pawn + Offsets::isDBNO) >> 4) & 1;
 				Target.isVisible = sdk::isVisible(Target.Mesh);
 				Target.WorldDist = sdk::GetDistanceFromLocalPlayer(Target.RootBonePos3D);
 				Target.ScreenDist = util::GetCrossDistance(Head2D.x, Head2D.y, CenterScreen.x, CenterScreen.y);

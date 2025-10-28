@@ -1,14 +1,10 @@
 #include "includes.h"
 
-static std::shared_ptr<driver::c_Memory> Memory = nullptr;
-static std::shared_ptr<ui::c_render> Rendering = nullptr;
-
 auto main() -> int {
-    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
-
     // instanciate driver handle 
-    Memory = std::make_shared<driver::c_Memory>(encrypt(L"FortniteClient-Win64-Shipping.exe"));
-    Rendering = std::make_shared<ui::c_render>();
+    std::wstring TargetApplication = encrypt(L"FortniteClient-Win64-Shipping.exe");
+    std::shared_ptr<driver::c_Memory> Memory = std::make_shared<driver::c_Memory>(TargetApplication);
+    std::shared_ptr<ui::c_render> Rendering = std::make_shared<ui::c_render>(); // for drawing
 
     // grab offsets online
     if (!Offsets::GrabOffsets())
@@ -18,31 +14,44 @@ auto main() -> int {
     }
 
     std::shared_ptr<features::c_Features> Features = std::make_unique<features::c_Features>(Rendering, Memory);
-    
-    // reading takes time so offload it to a seperate thread
-    std::thread cache(sdk::RefreshCache, Memory);
-    
-    // seperate rendering because its cleaner imo
-    std::thread render([&]() {
-        std::unique_ptr<ui::c_UI> Menu = std::make_unique<ui::c_UI>(Rendering, Features);
-        Menu->RenderLoop();
-    });
+    std::unique_ptr<ui::c_UI> Menu = std::make_unique<ui::c_UI>(Rendering, Features);
 
+    // reading takes time so offload it to a seperate thread
+    std::thread cache([&Memory]()
+    {
+        SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+        sdk::RefreshCache(Memory);
+    });
+    
     while (true)
     {
-        if (!PtrCache::Gworld)
+        MSG msg;
+        while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE))
+        {
+            ::TranslateMessage(&msg);
+            ::DispatchMessage(&msg);
+            if (msg.message == WM_QUIT)
+                break;
+        }
+        
+        if (!Menu->isMenuInitialized || !PtrCache::Gworld)
         {
             Sleep(500);
             continue;
         }
 
-        Features->onUpdate();
+        Features->onUpdate(); // get data to render and cache it
+        Menu->onRender(); // calls Features->onRender() after dx9 init and before endframe
 
-        Sleep(1);
+        Sleep(5);
     }
 
-    cache.join();
-    render.join();
+    cache.detach();
+
+    Menu.reset();
+    Features.reset();
+    Memory.reset();
+    Rendering.reset();
 
     std::cout << encrypt("Press enter to exit...") << std::endl;
     std::cin.get();

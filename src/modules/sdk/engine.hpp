@@ -81,71 +81,64 @@ inline static float rad2deg2 = (float)M_PI / 180.0f;
 
 namespace Engine
 {
-
-	struct Entity
+	inline D3DMATRIX MatrixMultiplication(D3DMATRIX pM1, D3DMATRIX pM2)
 	{
-		uintptr_t PlayerState = 0;
-		uintptr_t Pawn = 0;
-		uintptr_t BoneArray = 0;
-		uintptr_t Mesh = 0;
-		uintptr_t CurrentWeapon = 0;
+		D3DMATRIX pOut;
+		pOut._11 = pM1._11 * pM2._11 + pM1._12 * pM2._21 + pM1._13 * pM2._31 + pM1._14 * pM2._41;
+		pOut._12 = pM1._11 * pM2._12 + pM1._12 * pM2._22 + pM1._13 * pM2._32 + pM1._14 * pM2._42;
+		pOut._13 = pM1._11 * pM2._13 + pM1._12 * pM2._23 + pM1._13 * pM2._33 + pM1._14 * pM2._43;
+		pOut._14 = pM1._11 * pM2._14 + pM1._12 * pM2._24 + pM1._13 * pM2._34 + pM1._14 * pM2._44;
+		pOut._21 = pM1._21 * pM2._11 + pM1._22 * pM2._21 + pM1._23 * pM2._31 + pM1._24 * pM2._41;
+		pOut._22 = pM1._21 * pM2._12 + pM1._22 * pM2._22 + pM1._23 * pM2._32 + pM1._24 * pM2._42;
+		pOut._23 = pM1._21 * pM2._13 + pM1._22 * pM2._23 + pM1._23 * pM2._33 + pM1._24 * pM2._43;
+		pOut._24 = pM1._21 * pM2._14 + pM1._22 * pM2._24 + pM1._23 * pM2._34 + pM1._24 * pM2._44;
+		pOut._31 = pM1._31 * pM2._11 + pM1._32 * pM2._21 + pM1._33 * pM2._31 + pM1._34 * pM2._41;
+		pOut._32 = pM1._31 * pM2._12 + pM1._32 * pM2._22 + pM1._33 * pM2._32 + pM1._34 * pM2._42;
+		pOut._33 = pM1._31 * pM2._13 + pM1._32 * pM2._23 + pM1._33 * pM2._33 + pM1._34 * pM2._43;
+		pOut._34 = pM1._31 * pM2._14 + pM1._32 * pM2._24 + pM1._33 * pM2._34 + pM1._34 * pM2._44;
+		pOut._41 = pM1._41 * pM2._11 + pM1._42 * pM2._21 + pM1._43 * pM2._31 + pM1._44 * pM2._41;
+		pOut._42 = pM1._41 * pM2._12 + pM1._42 * pM2._22 + pM1._43 * pM2._32 + pM1._44 * pM2._42;
+		pOut._43 = pM1._41 * pM2._13 + pM1._42 * pM2._23 + pM1._43 * pM2._33 + pM1._44 * pM2._43;
+		pOut._44 = pM1._41 * pM2._14 + pM1._42 * pM2._24 + pM1._43 * pM2._34 + pM1._44 * pM2._44;
 
-		Vector3 HeadBonePos3D{};
-		Vector3 RootBonePos3D{};
-		Vector2 HeadBonePos2D{};
-		Vector2 RootBonePos2D{};
+		return pOut;
+	}
 
-		char isDying = 0;
-		char isDowned = 0;
-		bool isVisible = false;
+	inline D3DMATRIX Matrix(Vector3 rot, Vector3 origin) {
+		float radPitch = rot.x * rad2deg2;
+		float radYaw = rot.y * rad2deg2;
+		float radRoll = rot.z * rad2deg2;
 
-		int EntityID = -1;
-		double WorldDist = -1.0f;
-		double ScreenDist = -1.0f;
-	};
+		float SP = sinf(radPitch);
+		float CP = cosf(radPitch);
+		float SY = sinf(radYaw);
+		float CY = cosf(radYaw);
+		float SR = sinf(radRoll);
+		float CR = cosf(radRoll);
 
-	struct EntityCache
-	{
-	private:
-		std::unordered_map<int32_t, Entity> m_EntityMap;
+		D3DMATRIX _matrix;
+		_matrix.m[0][0] = CP * CY;
+		_matrix.m[0][1] = CP * SY;
+		_matrix.m[0][2] = SP;
+		_matrix.m[0][3] = 0.f;
 
-	public:
-		inline auto Size() -> size_t
-		{
-			return m_EntityMap.size();
-		}
+		_matrix.m[1][0] = SR * SP * CY - CR * SY;
+		_matrix.m[1][1] = SR * SP * SY + CR * CY;
+		_matrix.m[1][2] = -SR * CP;
+		_matrix.m[1][3] = 0.f;
 
-		inline void Set(int32_t entityID, const Entity& entity)
-		{
-			m_EntityMap[entityID] = entity;
-		}
+		_matrix.m[2][0] = -(CR * SP * CY + SR * SY);
+		_matrix.m[2][1] = CY * SR - CR * SP * SY;
+		_matrix.m[2][2] = CR * CP;
+		_matrix.m[2][3] = 0.f;
 
-		inline bool Get(int32_t entityID, Entity& outEntity) const
-		{
-			if (m_EntityMap.empty())
-				return false;
+		_matrix.m[3][0] = origin.x;
+		_matrix.m[3][1] = origin.y;
+		_matrix.m[3][2] = origin.z;
+		_matrix.m[3][3] = 1.f;
 
-			auto it = m_EntityMap.find(entityID);
-			if (it != m_EntityMap.end())
-			{
-				outEntity = it->second;
-				return true;
-			}
-
-			return false;
-		}
-
-		inline void Clear()
-		{
-			if (!m_EntityMap.empty())
-				m_EntityMap.clear();
-		}
-
-		inline void Reserve(size_t count)
-		{
-			m_EntityMap.reserve(count);
-		}
-	};
+		return _matrix;
+	}
 
 	template < class type >
 	class tarray
@@ -225,14 +218,6 @@ namespace Engine
 		fmatrix() : dbl_matrix(), x_plane(), y_plane(), z_plane(), w_plane() {}
 	};
 
-	
-	struct Camera
-	{
-		Vector3 Location;
-		Vector3 Rotation;
-		float FieldOfView;
-	};
-
 	struct FQuat
 	{
 		double x;
@@ -290,63 +275,114 @@ namespace Engine
 		}
 	};
 
-	
-	inline D3DMATRIX MatrixMultiplication(D3DMATRIX pM1, D3DMATRIX pM2)
+	struct Camera
 	{
-		D3DMATRIX pOut;
-		pOut._11 = pM1._11 * pM2._11 + pM1._12 * pM2._21 + pM1._13 * pM2._31 + pM1._14 * pM2._41;
-		pOut._12 = pM1._11 * pM2._12 + pM1._12 * pM2._22 + pM1._13 * pM2._32 + pM1._14 * pM2._42;
-		pOut._13 = pM1._11 * pM2._13 + pM1._12 * pM2._23 + pM1._13 * pM2._33 + pM1._14 * pM2._43;
-		pOut._14 = pM1._11 * pM2._14 + pM1._12 * pM2._24 + pM1._13 * pM2._34 + pM1._14 * pM2._44;
-		pOut._21 = pM1._21 * pM2._11 + pM1._22 * pM2._21 + pM1._23 * pM2._31 + pM1._24 * pM2._41;
-		pOut._22 = pM1._21 * pM2._12 + pM1._22 * pM2._22 + pM1._23 * pM2._32 + pM1._24 * pM2._42;
-		pOut._23 = pM1._21 * pM2._13 + pM1._22 * pM2._23 + pM1._23 * pM2._33 + pM1._24 * pM2._43;
-		pOut._24 = pM1._21 * pM2._14 + pM1._22 * pM2._24 + pM1._23 * pM2._34 + pM1._24 * pM2._44;
-		pOut._31 = pM1._31 * pM2._11 + pM1._32 * pM2._21 + pM1._33 * pM2._31 + pM1._34 * pM2._41;
-		pOut._32 = pM1._31 * pM2._12 + pM1._32 * pM2._22 + pM1._33 * pM2._32 + pM1._34 * pM2._42;
-		pOut._33 = pM1._31 * pM2._13 + pM1._32 * pM2._23 + pM1._33 * pM2._33 + pM1._34 * pM2._43;
-		pOut._34 = pM1._31 * pM2._14 + pM1._32 * pM2._24 + pM1._33 * pM2._34 + pM1._34 * pM2._44;
-		pOut._41 = pM1._41 * pM2._11 + pM1._42 * pM2._21 + pM1._43 * pM2._31 + pM1._44 * pM2._41;
-		pOut._42 = pM1._41 * pM2._12 + pM1._42 * pM2._22 + pM1._43 * pM2._32 + pM1._44 * pM2._42;
-		pOut._43 = pM1._41 * pM2._13 + pM1._42 * pM2._23 + pM1._43 * pM2._33 + pM1._44 * pM2._43;
-		pOut._44 = pM1._41 * pM2._14 + pM1._42 * pM2._24 + pM1._43 * pM2._34 + pM1._44 * pM2._44;
+		Vector3 Location;
+		Vector3 Rotation;
+		float FieldOfView;
+	};
 
-		return pOut;
-	}
+	struct Entity
+	{
+		uintptr_t PlayerState = 0;
+		uintptr_t Pawn = 0;
+		uintptr_t BoneArray = 0;
+		uintptr_t Mesh = 0;
+		uintptr_t CurrentWeapon = 0;
 
-	inline D3DMATRIX Matrix(Vector3 rot, Vector3 origin) {
-		float radPitch = rot.x * rad2deg2;
-		float radYaw = rot.y * rad2deg2;
-		float radRoll = rot.z * rad2deg2;
+		Vector3 HeadBonePos3D{};
+		Vector3 RootBonePos3D{};
+		Vector2 HeadBonePos2D{};
+		Vector2 RootBonePos2D{};
 
-		float SP = sinf(radPitch);
-		float CP = cosf(radPitch);
-		float SY = sinf(radYaw);
-		float CY = cosf(radYaw);
-		float SR = sinf(radRoll);
-		float CR = cosf(radRoll);
+		char isDying = 0;
+		char isDowned = 0;
+		bool isVisible = false;
 
-		D3DMATRIX _matrix;
-		_matrix.m[0][0] = CP * CY;
-		_matrix.m[0][1] = CP * SY;
-		_matrix.m[0][2] = SP;
-		_matrix.m[0][3] = 0.f;
+		int EntityID = -1;
+		double WorldDist = -1.0f;
+		double ScreenDist = -1.0f;
+	};
 
-		_matrix.m[1][0] = SR * SP * CY - CR * SY;
-		_matrix.m[1][1] = SR * SP * SY + CR * CY;
-		_matrix.m[1][2] = -SR * CP;
-		_matrix.m[1][3] = 0.f;
+	struct EntityCache
+	{
+	private:
+		std::unordered_map<int32_t, Entity> m_EntityMap;
 
-		_matrix.m[2][0] = -(CR * SP * CY + SR * SY);
-		_matrix.m[2][1] = CY * SR - CR * SP * SY;
-		_matrix.m[2][2] = CR * CP;
-		_matrix.m[2][3] = 0.f;
+	public:
+		inline auto Size() -> size_t
+		{
+			return m_EntityMap.size();
+		}
 
-		_matrix.m[3][0] = origin.x;
-		_matrix.m[3][1] = origin.y;
-		_matrix.m[3][2] = origin.z;
-		_matrix.m[3][3] = 1.f;
+		inline void Set(int32_t entityID, const Entity& entity)
+		{
+			m_EntityMap[entityID] = entity;
+		}
 
-		return _matrix;
-	}
+		inline bool Get(int32_t entityID, Entity& outEntity) const
+		{
+			if (m_EntityMap.empty())
+				return false;
+
+			auto it = m_EntityMap.find(entityID);
+			if (it != m_EntityMap.end())
+			{
+				outEntity = it->second;
+				return true;
+			}
+
+			return false;
+		}
+
+		inline void Clear()
+		{
+			if (!m_EntityMap.empty())
+				m_EntityMap.clear();
+		}
+
+		inline void Reserve(size_t count)
+		{
+			m_EntityMap.reserve(count);
+		}
+	};
+
+	// Hashmap for local bone pos tied to playerid
+	struct BoneCache
+	{
+	private:
+		std::unordered_map<int32_t, Engine::FTransform> m_BoneMap;
+
+	public:
+		inline void Set(int32_t boneID, const Engine::FTransform& position)
+		{
+			m_BoneMap[boneID] = position;
+		}
+
+		inline bool Get(int32_t boneID, Engine::FTransform& outPosition) const
+		{
+			if (m_BoneMap.empty())
+				return false;
+
+			auto it = m_BoneMap.find(boneID);
+			if (it != m_BoneMap.end())
+			{
+				outPosition = it->second;
+				return true;
+			}
+
+			return false;
+		}
+
+		inline void Clear()
+		{
+			if (!m_BoneMap.empty())
+				m_BoneMap.clear();
+		}
+
+		inline void Reserve(size_t count)
+		{
+			m_BoneMap.reserve(count);
+		}
+	};
 }

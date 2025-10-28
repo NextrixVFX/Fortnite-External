@@ -12,7 +12,7 @@ namespace features
 		std::unique_ptr<features::c_Softaim> Softaim = nullptr;
 
 	public:
-		c_Features(std::shared_ptr<ui::c_render> _Rendering, std::shared_ptr<driver::c_Memory> _Memory)
+		c_Features(std::weak_ptr<ui::c_render> _Rendering, std::weak_ptr<driver::c_Memory> _Memory)
 		{
 			Esp = std::make_unique<features::c_ESP>(_Rendering, _Memory);
 			Softaim = std::make_unique<features::c_Softaim>(_Rendering, _Memory);
@@ -20,8 +20,8 @@ namespace features
 
 		~c_Features()
 		{
-			Esp = nullptr;
-			Softaim = nullptr;
+			Esp.reset();
+			Softaim.reset();
 		}
 
 		inline auto onRender() -> void
@@ -37,10 +37,10 @@ namespace features
 
 		inline auto onUpdate() -> void
 		{
-			if (Esp && Esp->isInitialized)
+			if (Esp)
 				Esp->onUpdate();
 
-			if (Softaim && Softaim->isInitialized && useSoftaim)
+			if (Softaim && useSoftaim)
 				Softaim->onUpdate();
 		}
 	};

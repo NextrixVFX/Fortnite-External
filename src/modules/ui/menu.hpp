@@ -64,10 +64,13 @@ namespace ui
     public:
         bool isMenuInitialized = false;
         
-        c_UI(std::shared_ptr<ui::c_render> _Rendering, std::shared_ptr<features::c_Features> _Features)
+        c_UI(std::weak_ptr<ui::c_render> _Rendering, std::weak_ptr<features::c_Features> _Features)
         {
-            Rendering = _Rendering;
-            Features = _Features;
+            if (!(Rendering = _Rendering.lock()))
+                return;
+
+            if (!(Features = _Features.lock()))
+                return;
 
             // Create overlay window
             wc = { 
@@ -155,61 +158,45 @@ namespace ui
             if (pD3D) { pD3D->Release(); pD3D = nullptr; }
             if (hwnd) { DestroyWindow(hwnd); hwnd = nullptr; }
             UnregisterClassA(encrypt("SuperScaryOverlay"), wc.hInstance);
+
+            Features.reset();
+            Rendering.reset();
         }
 
     public:
-        void RenderLoop()
+        void onRender()
         {
-            while (true)
+            ImGui_ImplDX9_NewFrame();
+            ImGui_ImplWin32_NewFrame();
+            ImGui::NewFrame();
+
+            Rendering->GetDrawList() = ImGui::GetBackgroundDrawList();
+
+            // Render menu
+            RenderMenu();
+
+            // Render cheat stuff
+            Features->onRender();
+
+            //ImGui::EndFrame();
+            pDevice->SetRenderState(D3DRS_ZENABLE, false);
+            pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
+            pDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, false);
+            pDevice->Clear(0, nullptr, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
+
+            if (pDevice->BeginScene() >= 0)
             {
-                MSG msg;
-                while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE))
-                {
-                    ::TranslateMessage(&msg);
-                    ::DispatchMessage(&msg);
-                    if (msg.message == WM_QUIT)
-                        break;
-                }
+                ImGui::Render();
+                ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+                pDevice->EndScene();
+            }
 
-                if (!this->isMenuInitialized)
-                {
-                    continue;
-                }
-
-                ImGui_ImplDX9_NewFrame();
-                ImGui_ImplWin32_NewFrame();
-                ImGui::NewFrame();
-
-                Rendering->GetDrawList() = ImGui::GetBackgroundDrawList();
-
-                // Render menu
-                RenderMenu();
-
-                // Render cheat stuff
-                Features->onRender();
-
-                //ImGui::EndFrame();
-                pDevice->SetRenderState(D3DRS_ZENABLE, false);
-                pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
-                pDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, false);
-                pDevice->Clear(0, nullptr, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
-
-                if (pDevice->BeginScene() >= 0)
-                {
-                    ImGui::Render();
-                    ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
-                    pDevice->EndScene();
-                }
-
-                HRESULT result = pDevice->Present(nullptr, nullptr, nullptr, nullptr);
-                if (result == D3DERR_DEVICELOST && pDevice->TestCooperativeLevel() == D3DERR_DEVICENOTRESET)
-                {
-                    ImGui_ImplDX9_InvalidateDeviceObjects();
-                    pDevice->Reset(&d3dParams);
-                    ImGui_ImplDX9_CreateDeviceObjects();
-                }
-
-                Sleep(1);
+            HRESULT result = pDevice->Present(nullptr, nullptr, nullptr, nullptr);
+            if (result == D3DERR_DEVICELOST && pDevice->TestCooperativeLevel() == D3DERR_DEVICENOTRESET)
+            {
+                ImGui_ImplDX9_InvalidateDeviceObjects();
+                pDevice->Reset(&d3dParams);
+                ImGui_ImplDX9_CreateDeviceObjects();
             }
         }
 

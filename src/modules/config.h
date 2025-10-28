@@ -10,7 +10,7 @@ inline static bool useESP = false;
 inline static bool useBoxes = true;
 inline static bool useLines = true;
 inline static float lineHeight = 0.0f;
-inline static int selectedBone = 84;
+inline static int selectedBone = 132;
 
 // Customization
 inline static float fovColor[4] = { 255.0f, 128.0f, 0.0f, 255.0f };

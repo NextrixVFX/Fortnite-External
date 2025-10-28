@@ -113,12 +113,14 @@ namespace driver {
             return procID;
         }
 
+        // For reading pointers
         template<typename ret_t = std::uintptr_t, typename addr_t>
         auto Read(addr_t address) -> ret_t
         {
             return kernel->read(address);
         }
 
+        // For reading data
         template<typename ret_t, typename addr_t>
         ret_t ReadBuffer(addr_t address)
         {

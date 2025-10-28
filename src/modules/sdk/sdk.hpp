@@ -12,6 +12,7 @@
 
 namespace PtrCache
 {
+	// base classes
 	inline uintptr_t Gworld = 0;
 	inline uintptr_t GameInstance = 0;
 	inline uintptr_t Player = 0;
@@ -20,67 +21,33 @@ namespace PtrCache
 	inline uintptr_t RootComponent = 0;
 	inline uintptr_t LocalPlayers = 0;
 	inline uintptr_t PlayerController = 0;
-	inline uintptr_t CameraLocation = 0;
-	inline uintptr_t CameraRotation = 0;
-	inline Engine::tarray<uintptr_t> viewMatrix;
-	inline uintptr_t viewState = 0;
+	
+	// used in playercache / esp
+	inline uintptr_t GameState = 0;
+	inline uintptr_t PlayerArray = 0;
+	inline int PlayerList = 0;
 
-	inline Engine::Camera* vCamera = nullptr;
+	// used in isvisible
+	inline double LastRenderTime = FLT_MAX;
+
+	// stored structs
+	inline Engine::tarray<uintptr_t> viewMatrix{};
+	inline Engine::Camera vCamera{};
 	inline Engine::EntityCache Entities{};
 	inline Engine::Entity Target{};
 }
-
-// Hashmap for local bone pos tied to playerid
-struct BoneCache
-{
-private:
-	std::unordered_map<int32_t, Engine::FTransform> m_BoneMap;
-
-public:
-	inline void Set(int32_t boneID, const Engine::FTransform& position)
-	{
-		m_BoneMap[boneID] = position;
-	}
-
-	inline bool Get(int32_t boneID, Engine::FTransform& outPosition) const
-	{
-		if (m_BoneMap.empty())
-			return false;
-		
-		auto it = m_BoneMap.find(boneID);
-		if (it != m_BoneMap.end())
-		{
-			outPosition = it->second;
-			return true;
-		}
-
-		return false;
-	}
-
-	inline void Clear()
-	{
-		if (!m_BoneMap.empty())
-			m_BoneMap.clear();
-	}
-
-	inline void Reserve(size_t count)
-	{
-		m_BoneMap.reserve(count);
-	}
-};
 
 // precalculate
 inline std::shared_ptr<driver::c_Memory> _Memory = nullptr;
 
 namespace sdk
 {
-	inline static BoneCache boneCache{};
+	inline static Engine::BoneCache boneCache{};
 
 	inline auto isVisible(uintptr_t Mesh) -> bool
-	{
-		double Seconds = _Memory->ReadBuffer<double>(PtrCache::Gworld + 0x198); // UWorld::LastRenderTime
-		float LastRenderTime = _Memory->ReadBuffer<float>(Mesh + 0x32C); // UPrimitiveComponent::LastRenderTimeOnScreen
-		return (Seconds - LastRenderTime <= 0.06f);
+	{ 
+		float MeshRenderTime = _Memory->ReadBuffer<float>(Mesh + 0x32C); // UPrimitiveComponent::LastRenderTimeOnScreen
+		return (PtrCache::LastRenderTime - MeshRenderTime <= 0.06f);
 	}
 
 	inline auto GetBoneWithRotation(uintptr_t mesh, int id, int32_t playerId) -> Vector3
@@ -138,16 +105,15 @@ namespace sdk
 		return cam;
 	}
 	
-
-	inline auto ProjectWorldToScreen(Vector3 WorldLocation, Engine::Camera* vCamera) -> Vector2
+	inline auto ProjectWorldToScreen(Vector3 WorldLocation, Engine::Camera vCamera) -> Vector2
 	{
-		D3DMATRIX tempMatrix = Engine::Matrix(vCamera->Rotation, Vector3(0,0,0));
+		D3DMATRIX tempMatrix = Engine::Matrix(vCamera.Rotation, Vector3(0,0,0));
 
 		Vector3 vAxisX = Vector3(tempMatrix.m[0][0], tempMatrix.m[0][1], tempMatrix.m[0][2]);
 		Vector3 vAxisY = Vector3(tempMatrix.m[1][0], tempMatrix.m[1][1], tempMatrix.m[1][2]);
 		Vector3 vAxisZ = Vector3(tempMatrix.m[2][0], tempMatrix.m[2][1], tempMatrix.m[2][2]);
 
-		Vector3 vDelta = WorldLocation - vCamera->Location;
+		Vector3 vDelta = WorldLocation - vCamera.Location;
 		Vector3 vTransformed = Vector3(
 			vDelta.Dot(vAxisY),
 			vDelta.Dot(vAxisZ),
@@ -155,14 +121,14 @@ namespace sdk
 		);
 
 		return Vector2(
-			CenterScreen.x + vTransformed.x * (CenterScreen.x / tanf(vCamera->FieldOfView * (float)M_PI / 360.f)) / vTransformed.z,
-			CenterScreen.y - vTransformed.y * (CenterScreen.x / tanf(vCamera->FieldOfView * (float)M_PI / 360.f)) / vTransformed.z
+			CenterScreen.x + vTransformed.x * (CenterScreen.x / tanf(vCamera.FieldOfView * (float)M_PI / 360.f)) / vTransformed.z,
+			CenterScreen.y - vTransformed.y * (CenterScreen.x / tanf(vCamera.FieldOfView * (float)M_PI / 360.f)) / vTransformed.z
 		);
 	}
 
 	inline auto GetDistanceFromLocalPlayer(Vector3 EntityPosition) -> double
 	{
-		Vector3 Position = PtrCache::vCamera->Location;
+		Vector3 Position = PtrCache::vCamera.Location;
 		double dx = EntityPosition.x - Position.x;
 		double dy = EntityPosition.y - Position.y;
 		double dz = EntityPosition.z - Position.z;
@@ -179,46 +145,54 @@ namespace sdk
 		PtrCache::RootComponent = 0;
 		PtrCache::LocalPlayers = 0;
 		PtrCache::PlayerController = 0;
-		PtrCache::CameraLocation = 0;
-		PtrCache::CameraRotation = 0;
-		PtrCache::vCamera = nullptr;
+		PtrCache::GameState = 0;
+		PtrCache::PlayerArray = 0;
+		PtrCache::PlayerList = 0;
+		PtrCache::viewMatrix = {};
+		PtrCache::vCamera = {};
+		PtrCache::Entities = {};
+		PtrCache::Target = {};
+		PtrCache::LastRenderTime = FLT_MAX;
 	}
 
-	inline auto RefreshCache(std::shared_ptr<driver::c_Memory> Memory_ptr) -> void
+	inline auto RefreshCache(std::weak_ptr<driver::c_Memory> _memory) -> void
 	{
-		_Memory = Memory_ptr;
+		if (!(_Memory = _memory.lock()))
+			return;
 
-		while (true)
+		while (_Memory)
 		{
 			// https://dumpspace.spuckwaffel.com/Games/?hash=6b77eceb&type=classes&idx=UWorld
-			PtrCache::Gworld = _Memory->Read<uint64_t>(_Memory->currentProcess.base_address + Offsets::UWorld);
+			PtrCache::Gworld = _Memory->Read<uintptr_t>(_Memory->currentProcess.base_address + Offsets::UWorld);
 
 			// https://dumpspace.spuckwaffel.com/Games/?hash=6b77eceb&type=classes&idx=UWorld&member=OwningGameInstance
-			PtrCache::GameInstance = _Memory->Read<uint64_t>(PtrCache::Gworld + Offsets::OwningGameInstance);
+			PtrCache::GameInstance = _Memory->Read<uintptr_t>(PtrCache::Gworld + Offsets::OwningGameInstance);
 
 			// https://dumpspace.spuckwaffel.com/Games/?hash=6b77eceb&type=classes&idx=UGameInstance&member=LocalPlayers
-			PtrCache::LocalPlayers = _Memory->Read<uint64_t>(_Memory->Read<uint64_t>(PtrCache::GameInstance + Offsets::LocalPlayers));
+			PtrCache::LocalPlayers = _Memory->Read<uintptr_t>(_Memory->Read<uintptr_t>(PtrCache::GameInstance + Offsets::LocalPlayers));
 
 			// https://dumpspace.spuckwaffel.com/Games/?hash=6b77eceb&type=classes&idx=APlayerController
-			PtrCache::PlayerController = _Memory->Read<uint64_t>(PtrCache::LocalPlayers + Offsets::PlayerController);
+			PtrCache::PlayerController = _Memory->Read<uintptr_t>(PtrCache::LocalPlayers + Offsets::PlayerController);
 
 			// https://dumpspace.spuckwaffel.com/Games/?hash=6b77eceb&type=classes&idx=APlayerController&member=AcknowledgedPawn
-			PtrCache::Player = _Memory->Read<uint64_t>(PtrCache::PlayerController + Offsets::AcknowledgedPawn);
+			PtrCache::Player = _Memory->Read<uintptr_t>(PtrCache::PlayerController + Offsets::AcknowledgedPawn);
 
 			// https://dumpspace.spuckwaffel.com/Games/?hash=6b77eceb&type=classes&idx=AActor&member=RootComponent
-			PtrCache::RootComponent = _Memory->Read<uint64_t>(PtrCache::Player + Offsets::RootComponent);
+			PtrCache::RootComponent = _Memory->Read<uintptr_t>(PtrCache::Player + Offsets::RootComponent);
 
-			PtrCache::CameraLocation = _Memory->Read<uintptr_t>(PtrCache::Gworld + 0x178);
+			PtrCache::GameState = _Memory->Read<uintptr_t>(PtrCache::Gworld + Offsets::GameState);
+			
+			PtrCache::PlayerArray = _Memory->Read<uintptr_t>(PtrCache::GameState + Offsets::PlayerArray);
+			
+			PtrCache::PlayerList = _Memory->ReadBuffer<int>(PtrCache::GameState + (Offsets::PlayerArray + sizeof(uintptr_t)));
 
-			PtrCache::CameraRotation = _Memory->Read<uintptr_t>(PtrCache::Gworld + 0x188);
+			PtrCache::LastRenderTime = _Memory->ReadBuffer<double>(PtrCache::Gworld + 0x198); // UWorld::LastRenderTime
 
 			PtrCache::viewMatrix = _Memory->ReadBuffer<Engine::tarray<uintptr_t>>(PtrCache::LocalPlayers + 0xD0);
 
-			Engine::Camera angles = sdk::GetViewAngles();
+			PtrCache::vCamera = sdk::GetViewAngles();
 
-			PtrCache::vCamera = &angles;
-
-			Sleep(1);
+			Sleep(5);
 		}
 
 		ClearCache();
