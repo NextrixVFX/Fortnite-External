@@ -1,16 +1,14 @@
 #include "includes.h"
 
 static std::shared_ptr<driver::c_Memory> Memory = nullptr;
-static std::unique_ptr<ui::c_UI> Menu = nullptr;
-static std::unique_ptr < features::c_Features> Features = nullptr;
-
-
+static std::shared_ptr<ui::c_render> Rendering = nullptr;
 
 auto main() -> int {
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 
     // instanciate driver handle 
     Memory = std::make_shared<driver::c_Memory>(encrypt(L"FortniteClient-Win64-Shipping.exe"));
+    Rendering = std::make_shared<ui::c_render>();
 
     // grab offsets online
     if (!Offsets::GrabOffsets())
@@ -19,35 +17,32 @@ auto main() -> int {
         return false;
     }
 
-    // read all pointer offsets ina seperate thread for optimization
+    std::shared_ptr<features::c_Features> Features = std::make_unique<features::c_Features>(Rendering, Memory);
+    
+    // reading takes time so offload it to a seperate thread
     std::thread cache(sdk::RefreshCache, Memory);
+    
+    // seperate rendering because its cleaner imo
+    std::thread render([&]() {
+        std::unique_ptr<ui::c_UI> Menu = std::make_unique<ui::c_UI>(Rendering, Features);
+        Menu->RenderLoop();
+    });
 
-    Menu = std::make_unique<ui::c_UI>(Memory);
-    Features = std::make_unique<features::c_Features>();
     while (true)
     {
-        MSG msg;
-        while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE))
-        {
-            ::TranslateMessage(&msg);
-            ::DispatchMessage(&msg);
-            if (msg.message == WM_QUIT)
-                break;
-        }
-
         if (!PtrCache::Gworld)
         {
             Sleep(500);
             continue;
         }
 
-        if (Menu->isMenuInitialized)
-            Menu->RenderLoop();
+        Features->onUpdate();
 
-        Sleep(5);
+        Sleep(1);
     }
 
     cache.join();
+    render.join();
 
     std::cout << encrypt("Press enter to exit...") << std::endl;
     std::cin.get();

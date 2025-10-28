@@ -58,14 +58,17 @@ namespace ui
     class c_UI
     {
     private:
-    public:
         std::shared_ptr<ui::c_render> Rendering = nullptr;
-        std::unique_ptr<features::c_ESP> Esp = nullptr;
-        std::unique_ptr<features::c_Softaim> Softaim = nullptr;
+        std::shared_ptr<features::c_Features> Features = nullptr;
+
+    public:
         bool isMenuInitialized = false;
         
-        c_UI(std::shared_ptr<driver::c_Memory> Memory_ptr)
+        c_UI(std::shared_ptr<ui::c_render> _Rendering, std::shared_ptr<features::c_Features> _Features)
         {
+            Rendering = _Rendering;
+            Features = _Features;
+
             // Create overlay window
             wc = { 
                 sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), 
@@ -96,10 +99,6 @@ namespace ui
                 return;
             }
 
-            Rendering = std::make_shared<ui::c_render>();
-            Esp = std::make_unique<features::c_ESP>();
-            Softaim = std::make_unique<features::c_Softaim>();
-
             IMGUI_CHECKVERSION();
             ImGui::CreateContext();
             ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -108,8 +107,6 @@ namespace ui
             io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
 
             Rendering->Initialize();
-            Esp->Initialize(Rendering, Memory_ptr);
-            Softaim->Initialize(Rendering, Memory_ptr);
 
             ImGui::StyleColorsDark();
             ImGui_ImplWin32_Init(hwnd);
@@ -163,42 +160,56 @@ namespace ui
     public:
         void RenderLoop()
         {
-            ImGui_ImplDX9_NewFrame();
-            ImGui_ImplWin32_NewFrame();
-            ImGui::NewFrame();
-
-            Rendering->GetDrawList() = ImGui::GetBackgroundDrawList();
-
-            // Render menu
-            RenderMenu();
-
-            // Render ESP
-            if (Esp && Esp->isInitialized)
-                Esp->onRender();
-
-            // Render Softaim
-            if (Softaim && Softaim->isInitialized && useSoftaim)
-                Softaim->onRender();
-
-            //ImGui::EndFrame();
-            pDevice->SetRenderState(D3DRS_ZENABLE, false);
-            pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
-            pDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, false);
-            pDevice->Clear(0, nullptr, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
-
-            if (pDevice->BeginScene() >= 0)
+            while (true)
             {
-                ImGui::Render();
-                ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
-                pDevice->EndScene();
-            }
+                MSG msg;
+                while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE))
+                {
+                    ::TranslateMessage(&msg);
+                    ::DispatchMessage(&msg);
+                    if (msg.message == WM_QUIT)
+                        break;
+                }
 
-            HRESULT result = pDevice->Present(nullptr, nullptr, nullptr, nullptr);
-            if (result == D3DERR_DEVICELOST && pDevice->TestCooperativeLevel() == D3DERR_DEVICENOTRESET)
-            {
-                ImGui_ImplDX9_InvalidateDeviceObjects();
-                pDevice->Reset(&d3dParams);
-                ImGui_ImplDX9_CreateDeviceObjects();
+                if (!this->isMenuInitialized)
+                {
+                    continue;
+                }
+
+                ImGui_ImplDX9_NewFrame();
+                ImGui_ImplWin32_NewFrame();
+                ImGui::NewFrame();
+
+                Rendering->GetDrawList() = ImGui::GetBackgroundDrawList();
+
+                // Render menu
+                RenderMenu();
+
+                // Render cheat stuff
+                Features->onRender();
+
+                //ImGui::EndFrame();
+                pDevice->SetRenderState(D3DRS_ZENABLE, false);
+                pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
+                pDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, false);
+                pDevice->Clear(0, nullptr, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
+
+                if (pDevice->BeginScene() >= 0)
+                {
+                    ImGui::Render();
+                    ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+                    pDevice->EndScene();
+                }
+
+                HRESULT result = pDevice->Present(nullptr, nullptr, nullptr, nullptr);
+                if (result == D3DERR_DEVICELOST && pDevice->TestCooperativeLevel() == D3DERR_DEVICENOTRESET)
+                {
+                    ImGui_ImplDX9_InvalidateDeviceObjects();
+                    pDevice->Reset(&d3dParams);
+                    ImGui_ImplDX9_CreateDeviceObjects();
+                }
+
+                Sleep(1);
             }
         }
 
@@ -234,7 +245,6 @@ namespace ui
                 ImGui::Checkbox(encrypt("Use Lines"), &useLines);
                 ImGui::SliderFloat(encrypt("Line Height"), &lineHeight, 0.0f, 1.0f);
                 ImGui::SliderInt(encrypt("Target Bone"), &selectedBone, 0, 240);
-                ImGui::SliderInt(encrypt("FOV"), &gotFOV, 70, 105);
             }
             else if (MenuTab == 2)
             {

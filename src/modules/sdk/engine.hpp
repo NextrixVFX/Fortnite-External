@@ -4,7 +4,7 @@
 #include <d3d9types.h>
 #include <corecrt_math.h>
 #include "math.hpp"
-
+#include <unordered_map>
 
 class Vector2
 {
@@ -81,6 +81,71 @@ inline static float rad2deg2 = (float)M_PI / 180.0f;
 
 namespace Engine
 {
+
+	struct Entity
+	{
+		uintptr_t PlayerState = 0;
+		uintptr_t Pawn = 0;
+		uintptr_t BoneArray = 0;
+		uintptr_t Mesh = 0;
+		uintptr_t CurrentWeapon = 0;
+
+		Vector3 HeadBonePos3D{};
+		Vector3 RootBonePos3D{};
+		Vector2 HeadBonePos2D{};
+		Vector2 RootBonePos2D{};
+
+		char isDying = 0;
+		char isDowned = 0;
+		bool isVisible = false;
+
+		int EntityID = -1;
+		double WorldDist = -1.0f;
+		double ScreenDist = -1.0f;
+	};
+
+	struct EntityCache
+	{
+	private:
+		std::unordered_map<int32_t, Entity> m_EntityMap;
+
+	public:
+		inline auto Size() -> size_t
+		{
+			return m_EntityMap.size();
+		}
+
+		inline void Set(int32_t entityID, const Entity& entity)
+		{
+			m_EntityMap[entityID] = entity;
+		}
+
+		inline bool Get(int32_t entityID, Entity& outEntity) const
+		{
+			if (m_EntityMap.empty())
+				return false;
+
+			auto it = m_EntityMap.find(entityID);
+			if (it != m_EntityMap.end())
+			{
+				outEntity = it->second;
+				return true;
+			}
+
+			return false;
+		}
+
+		inline void Clear()
+		{
+			if (!m_EntityMap.empty())
+				m_EntityMap.clear();
+		}
+
+		inline void Reserve(size_t count)
+		{
+			m_EntityMap.reserve(count);
+		}
+	};
 
 	template < class type >
 	class tarray
@@ -160,28 +225,7 @@ namespace Engine
 		fmatrix() : dbl_matrix(), x_plane(), y_plane(), z_plane(), w_plane() {}
 	};
 
-	struct Entity
-	{
-		uintptr_t PlayerState = 0;
-		uintptr_t Pawn = 0;
-		uintptr_t BoneArray = 0;
-		uintptr_t Mesh = 0;
-		uintptr_t CurrentWeapon = 0;
-		
-		Vector3 HeadBonePos3D{};
-		Vector3 RootBonePos3D{};
-		Vector2 HeadBonePos2D{};
-		Vector2 RootBonePos2D{};
-		
-		char isDying = 0;
-		char isDowned = 0;
-		bool isVisible = false;
-
-		int EntityID = -1;
-		double WorldDist = -1.0f;
-		double ScreenDist = -1.0f;
-	};
-
+	
 	struct Camera
 	{
 		Vector3 Location;

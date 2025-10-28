@@ -26,6 +26,7 @@ namespace PtrCache
 	inline uintptr_t viewState = 0;
 
 	inline Engine::Camera* vCamera = nullptr;
+	inline Engine::EntityCache Entities{};
 	inline Engine::Entity Target{};
 }
 
@@ -77,8 +78,8 @@ namespace sdk
 
 	inline auto isVisible(uintptr_t Mesh) -> bool
 	{
-		double Seconds = _Memory->Read<double>(PtrCache::Gworld + 0x198); // UWorld::LastRenderTime
-		float LastRenderTime = _Memory->Read<float>(Mesh + 0x32C); // UPrimitiveComponent::LastRenderTimeOnScreen
+		double Seconds = _Memory->ReadBuffer<double>(PtrCache::Gworld + 0x198); // UWorld::LastRenderTime
+		float LastRenderTime = _Memory->ReadBuffer<float>(Mesh + 0x32C); // UPrimitiveComponent::LastRenderTimeOnScreen
 		return (Seconds - LastRenderTime <= 0.06f);
 	}
 
@@ -119,7 +120,7 @@ namespace sdk
 		if (!View)
 			return {};
 
-		const double fovAxis = _Memory->ReadBuffer < double >(View + 0x740);
+		const double fovAxis = _Memory->ReadBuffer<double>(View + 0x740);
 		const Engine::fmatrix Projection = _Memory->ReadBuffer<Engine::fmatrix>(View + 0x940);
 		
 		cam.Rotation.x = std::asin(max(-1.0f, min(1.0f, Projection.z_plane.w))) * 180.0f / M_PI;
@@ -217,7 +218,7 @@ namespace sdk
 
 			PtrCache::vCamera = &angles;
 
-			Sleep(5);
+			Sleep(1);
 		}
 
 		ClearCache();

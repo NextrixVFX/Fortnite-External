@@ -18,50 +18,46 @@ namespace features
 		bool isInitialized = false;
 		inline static SerialInput::c_Mouse Mouse = SerialInput::c_Mouse(SerialConfig::ComPort, SerialConfig::BaudRate);
 
-		c_Softaim()
-		{ }
-
-		~c_Softaim()
-		{ }
-
-		inline auto Initialize(std::shared_ptr<ui::c_render> Renderer_ptr, std::shared_ptr<driver::c_Memory> Memory_ptr) -> void
+		c_Softaim(std::shared_ptr<ui::c_render> _Renderer, std::shared_ptr<driver::c_Memory> _Memory)
 		{
-			if (!(Renderer = Renderer_ptr))
-				return;
-
-			if (!(Memory = Memory_ptr))
-				return;
+			Renderer = _Renderer;
+			Memory = _Memory;
 
 			isInitialized = true;
 		}
 
+		~c_Softaim()
+		{
+			isInitialized = false;
+		}
+
 		inline auto onRender() -> void
 		{
+			if (!this->isInitialized)
+				return;
+
 			this->DrawFOVCircle(ImColor(fovColor[0], fovColor[1], fovColor[2], fovColor[3]));
-			this->onUpdate();
 		}
 
 		inline auto onUpdate() -> void
 		{
+			if (!this->isInitialized)
+				return;
+
 			// check if aiming
 			if (!GetAsyncKeyState(VK_RBUTTON))
 				return;
 
-			Engine::Entity* Target = &PtrCache::Target;
+			Engine::Entity Target = PtrCache::Target;
 
-			if (!Target)
+			if (Target.EntityID < 0)
 				return;
 
 			// todo
-			if (!Target->isVisible)
-			{
-				//std::cout << "Not Visible" << std::endl;
-				//return;
-			}
-
-			std::cout << "ID:\t" << Target->EntityID << std::endl;
-
-			Vector2 targetPos = Target->HeadBonePos2D;
+			if (!Target.isVisible)
+				return;
+			
+			Vector2 targetPos = Target.HeadBonePos2D;
 
 			// return if coord is outside of screen
 			if (!util::InsideBounds(targetPos, Vector2(Width, Height)))
