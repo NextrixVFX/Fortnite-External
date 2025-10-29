@@ -1,6 +1,6 @@
 # Fortnite-External
 ### Note
-- Mapper and IOCTL/Communication Driver not included.
+- Mapper and Driver not included.
 ### Features
 - Mouse movement via writing delta angles
 - Optimized ESP with Snaplines
