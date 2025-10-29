@@ -2,8 +2,9 @@
 ### Note
 - Mapper and IOCTL/Communication Driver not included.
 ### Features
-- Mouse movement via an arduino over serial
-- Fully working ESP and Aimbot with entity visibility detection
+- Mouse movement via writing delta angles
+- Optimized ESP with Snaplines
+- Working Softaim with visibility-detection & knocked-detection
 ### How to use
 - Open the solution and make sure dependencies are included correctly
 - import your driver ioctl communication into ```src/lib/*``` and resolve according methods in ```src/memory/memory.hpp```
