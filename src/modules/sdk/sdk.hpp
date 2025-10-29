@@ -42,7 +42,8 @@ inline std::shared_ptr<driver::c_Memory> _Memory = nullptr;
 
 namespace sdk
 {
-	inline static Engine::BoneCache boneCache{};
+	inline static Engine::BoneCache headBoneCache{};
+	inline static Engine::BoneCache rootBoneCache{};
 
 	inline auto isVisible(uintptr_t Mesh) -> bool
 	{ 
@@ -50,26 +51,23 @@ namespace sdk
 		return (PtrCache::LastRenderTime - MeshRenderTime <= 0.06f);
 	}
 
-	inline auto GetBoneWithRotation(uintptr_t mesh, int id, int32_t playerId) -> Vector3
+	inline auto GetBoneWithRotation(uintptr_t mesh, int id, int32_t playerIndex) -> Vector3
 	{
 		uintptr_t boneArray = _Memory->Read<uintptr_t>(mesh + 0x5E8); // bone array offset off uc
 		
-		Engine::FTransform BoneTransform{};
-
-		BoneTransform = _Memory->ReadBuffer<Engine::FTransform>(boneArray + id * 0x50); // size of FTransform is 0x50 (80bytes)
-		
+		Engine::FTransform BoneTransform = _Memory->ReadBuffer<Engine::FTransform>(boneArray + id * 0x50); // size of FTransform is 0x50 (80bytes)
 		Engine::FTransform ComponentToWorld = _Memory->ReadBuffer<Engine::FTransform>(mesh + 0x1e0); // got 1e0 from memdumping
 		
-		// if cant get bone array try to get last bone local pos
-		if (id > 0 && boneArray)
+		Engine::BoneCache* boneCache = (id > 0) ? &headBoneCache : &rootBoneCache;
+		if (!boneArray)
 		{
-			boneCache.Set(playerId, BoneTransform);
+			boneCache->Get(playerIndex, BoneTransform);
 		}
-		else if (id > 0 && !boneArray)
+		else
 		{
-			boneCache.Get(playerId, BoneTransform);
+			boneCache->Set(playerIndex, BoneTransform);
 		}
-
+		
 		D3DMATRIX Matrix = Engine::MatrixMultiplication(BoneTransform.ToMatrixWithScale(), ComponentToWorld.ToMatrixWithScale());
 
 		return Vector3(Matrix._41, Matrix._42, Matrix._43);

@@ -368,7 +368,15 @@ namespace driver {
 
         template<typename data_t, typename addr_t>
         bool write(addr_t address, data_t data) {
-            std::uintptr_t addr = reinterpret_cast<std::uintptr_t>(address);
+            std::uintptr_t addr;
+            
+            if constexpr (std::is_pointer_v<addr_t>) {
+                addr = reinterpret_cast<std::uintptr_t>(address);
+            }
+            else {
+                addr = static_cast<std::uintptr_t>(address);
+            }
+
             return this->write_memory(
                 addr,
                 &data,

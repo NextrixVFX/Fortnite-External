@@ -81,7 +81,7 @@ namespace features
 
 				if (useESP)
 				{
-					std::string_view Text = std::format("Player {0} : {1:.1f}m", Target.EntityID, Target.WorldDist * 0.01);
+					std::string_view Text = std::format("Player {0} : {1:.1f}m", Target.EntityIndex, Target.WorldDist * 0.01);
 					Renderer->Text(
 						ImVec2(Head2D.x, Head2D.y),
 						ImColor(255, 255, 255, 255), 1, Text,
@@ -103,8 +103,11 @@ namespace features
 				return;
 
 			if (!PtrCache::PlayerList)
-				sdk::boneCache.Clear();
-
+			{
+				sdk::rootBoneCache.Clear();
+				sdk::headBoneCache.Clear();
+			}
+			
 			float ClosestDistance = FLT_MAX;
 
 			Engine::Entity Target{};
@@ -127,8 +130,11 @@ namespace features
 				if (!Target.Mesh)
 					continue;
 
+				Target.EntityID = Memory->ReadBuffer<int32_t>(Target.PlayerState + 0x2ac);
+				Target.EntityIndex = i;
+
 				// Positions
-				Target.HeadBonePos3D = sdk::GetBoneWithRotation(Target.Mesh, selectedBone, i);
+				Target.HeadBonePos3D = sdk::GetBoneWithRotation(Target.Mesh, selectedBone, Target.EntityIndex);
 				Target.RootBonePos3D = sdk::GetBoneWithRotation(Target.Mesh, 0, -1);
 				Target.HeadBonePos2D = sdk::ProjectWorldToScreen(Target.HeadBonePos3D, PtrCache::vCamera);
 				Target.RootBonePos2D = sdk::ProjectWorldToScreen(Target.RootBonePos3D, PtrCache::vCamera);
@@ -143,8 +149,7 @@ namespace features
 				Target.isVisible = sdk::isVisible(Target.Mesh);
 				Target.WorldDist = sdk::GetDistanceFromLocalPlayer(Target.RootBonePos3D);
 				Target.ScreenDist = util::GetCrossDistance(Head2D.x, Head2D.y, CenterScreen.x, CenterScreen.y);
-				Target.EntityID = i;
-
+				
 				double ScreenDist = Target.ScreenDist;
 
 				// Get closest player
@@ -154,7 +159,7 @@ namespace features
 					PtrCache::Target = Target;
 				}
 
-				PtrCache::Entities.Set(Target.EntityID, Target);
+				PtrCache::Entities.Set(Target.EntityIndex, Target);
 			}
 		}
 	};

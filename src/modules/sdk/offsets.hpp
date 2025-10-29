@@ -23,7 +23,8 @@ public:
     inline static uintptr_t isDying = 0;
     inline static uintptr_t isABot = 0;
     inline static uintptr_t CurrentWeapon = 0;
-
+    inline static uintptr_t NetConnection = 0;
+    inline static uintptr_t RotationInput = 0;
 
     inline static bool GrabOffsets()
 	{
@@ -53,6 +54,9 @@ public:
         isABot = 0x2b2;
         isDying = 0x728; // api.getOffset("AFortPawn", "bIsDying").offset;
         CurrentWeapon = 0x990; // api.getOffset("AFortPawn", "AFortWeapon").offset;
+        NetConnection = 0x520; // api.getOffset("APlayerController", "NetConnection").offset;
+        RotationInput = NetConnection + 0x8; // api.getOffset("UNetConnection", "SentTemporaries").offset;
+
         return true;
 	}
 };

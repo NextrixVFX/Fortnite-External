@@ -623,7 +623,7 @@
     <ClInclude Include="src\modules\features\softaim\softaim.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\modules\serial\mouse.hpp">
+    <ClInclude Include="src\modules\input\mouse.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\lib\serial\serial.h">

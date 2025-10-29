@@ -1,5 +1,5 @@
 #pragma once
-#include "../../serial/mouse.hpp"
+#include "../../input/mouse.hpp"
 
 namespace features
 {
@@ -16,7 +16,10 @@ namespace features
 
 	public:
 		bool isInitialized = false;
-		inline static SerialInput::c_Mouse Mouse = SerialInput::c_Mouse(SerialConfig::ComPort, SerialConfig::BaudRate);
+		std::unique_ptr<MemoryInput::c_RotationInput> Mouse;
+
+		// deprecated serial input method
+		//inline static SerialInput::c_MouseSerial Mouse = SerialInput::c_MouseSerial(SerialConfig::ComPort, SerialConfig::BaudRate);
 
 		c_Softaim(std::weak_ptr<ui::c_render> _Renderer, std::weak_ptr<driver::c_Memory> _Memory)
 		{
@@ -26,11 +29,16 @@ namespace features
 			if (!(Memory = _Memory.lock()))
 				return;
 
+			Mouse = std::make_unique<MemoryInput::c_RotationInput>(Memory);
+
 			isInitialized = true;
 		}
 
 		~c_Softaim()
 		{
+			Mouse.reset();
+			Memory.reset();
+			Renderer.reset();
 			isInitialized = false;
 		}
 
@@ -53,44 +61,15 @@ namespace features
 
 			Engine::Entity Target = PtrCache::Target;
 
-			if (Target.EntityID < 0)
+			if (Target.EntityIndex < 0)
 				return;
 
-			// todo
-			if (!Target.isVisible)
+			if (!Target.isVisible || Target.isDowned)
 				return;
-			
-			Vector2 targetPos = Target.HeadBonePos2D;
 
-			// return if coord is outside of screen
-			if (!util::InsideBounds(targetPos, Vector2(Width, Height)))
-				return;
-				
-			static Vector2 currentPos = CenterScreen;
-
-			// add some jitter
-			Vector2 offset{
-				static_cast<double>(rand() % 5), 
-				static_cast<double>(rand() % 5)
-			};
-
-			targetPos.x -= offset.x;
-			targetPos.y -= offset.y;
-
-			// smoothing factor -> smaller = smoother
-			float smoothFactor = std::max(gotAimSmoothness * 0.05f, 0.05f);
-
-			// linear interpolation
-			currentPos.x += (targetPos.x - currentPos.x) * smoothFactor;
-			currentPos.y += (targetPos.y - currentPos.y) * smoothFactor;
-
-			// compute delta movement
-			float dx = currentPos.x - CenterScreen.x;
-			float dy = currentPos.y - CenterScreen.y;
-			
-			// tell arduino to move
-			Mouse.MoveRelative(dx, dy);
+			Mouse->LookAtEntity(Target);
 		}
 
+		
 	};
 }

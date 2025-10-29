@@ -299,9 +299,10 @@ namespace Engine
 		char isDowned = 0;
 		bool isVisible = false;
 
-		int EntityID = -1;
-		double WorldDist = -1.0f;
-		double ScreenDist = -1.0f;
+		int32_t EntityIndex = -1;
+		int32_t EntityID = -1;
+		double WorldDist = -1.0;
+		double ScreenDist = -1.0;
 	};
 
 	struct EntityCache

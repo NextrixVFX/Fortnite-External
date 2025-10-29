@@ -356,7 +356,7 @@
     <ClInclude Include="src\modules\features\softaim\softaim.hpp" />
     <ClInclude Include="src\modules\features\util\util.hpp" />
     <ClInclude Include="src\modules\sdk\math.hpp" />
-    <ClInclude Include="src\modules\serial\mouse.hpp" />
+    <ClInclude Include="src\modules\input\mouse.hpp" />
     <ClInclude Include="src\modules\sdk\DSAPI\DSAPI.h" />
     <ClInclude Include="src\modules\sdk\engine.hpp" />
     <ClInclude Include="src\modules\sdk\offsets.hpp" />

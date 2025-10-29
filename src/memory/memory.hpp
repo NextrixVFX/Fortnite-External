@@ -132,11 +132,11 @@ namespace driver {
             return buffer;
         }
 
-        template<typename return_t = std::uintptr_t, typename addr_t, typename data_t>
-        auto Write(addr_t address, data_t data) -> return_t
+        template<typename addr_t, typename data_t>
+        auto Write(addr_t address, data_t data) -> bool
         {
             if (address > 0x7FFFFFFFFFFF || address < 0x2000000)
-                return nullptr;
+                return false;
 
             return kernel->write(address, data);
         }

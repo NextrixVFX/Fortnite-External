@@ -42,6 +42,8 @@ namespace features
 
 			if (Softaim && useSoftaim)
 				Softaim->onUpdate();
+
+			PtrCache::Target = {};
 		}
 	};
 }
