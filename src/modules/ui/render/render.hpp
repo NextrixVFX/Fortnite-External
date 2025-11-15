@@ -30,7 +30,7 @@ namespace ui
 			mDrawList = drawList;
 		}
 
-		inline auto Text(const ImVec2& txt_pos, ImU32 color, const int flags, const std::string_view& message, ImFont* font) const -> void
+		inline auto Text(const ImVec2& txt_pos, const ImU32& color, const int flags, const std::string_view& message, ImFont* font) const -> void
 		{
 			mDrawList->PushTextureID(font->ContainerAtlas->TexID);
 
@@ -56,42 +56,42 @@ namespace ui
 			mDrawList->AddText(pos, color, message.data());
 		}
 
-		inline auto Line(float x1, float y1, float x2, float y2, ImU32 clr, float thickness = 1.0f) const -> void
+		inline auto Line(float x1, float y1, float x2, float y2, const ImU32& clr, float thickness = 1.0f) const -> void
 		{
 			mDrawList->AddLine(ImVec2(x1, y1), ImVec2(x2, y2), clr, thickness);
 		}
 
-		inline auto Rect(float x, float y, float w, float h, ImU32 clr, float rounding = 0.0f) const -> void
+		inline auto Rect(float x, float y, float w, float h, const ImU32& clr, float rounding = 0.0f) const -> void
 		{
 			mDrawList->AddRect(ImVec2(x, y), ImVec2(x + w, y + h), clr, rounding);
 		}
 
-		inline auto FilledRect(float x, float y, float w, float h, ImU32 color, float rounding, int flags) const -> void
+		inline auto FilledRect(float x, float y, float w, float h, const ImU32& color, float rounding, int flags) const -> void
 		{
 			mDrawList->AddRectFilled(ImVec2(x, y), ImVec2(x + w, y + h), color, rounding, flags);
 		}
 
-		inline auto FilledRectGradient(float x, float y, float w, float h, ImU32 col_upr_left, ImU32 col_upr_right, ImU32 col_bot_right, ImU32 col_bot_left) const -> void
+		inline auto FilledRectGradient(float x, float y, float w, float h, const ImU32& col_upr_left, const ImU32& col_upr_right, const ImU32& col_bot_right, const ImU32& col_bot_left) const -> void
 		{
 			mDrawList->AddRectFilledMultiColor(ImVec2(x, y), ImVec2(x + w, y + h), col_upr_left, col_upr_right, col_bot_right, col_bot_left);
 		}
 
-		inline auto Triangle(float x1, float y1, float x2, float y2, float x3, float y3, ImU32 clr, float thickness) const -> void
+		inline auto Triangle(float x1, float y1, float x2, float y2, float x3, float y3, const ImU32& clr, float thickness) const -> void
 		{
 			mDrawList->AddTriangle(ImVec2(x1, y1), ImVec2(x2, y2), ImVec2(x3, y3), clr, thickness);
 		}
 
-		inline auto TriangleFilled(float x1, float y1, float x2, float y2, float x3, float y3, ImU32 clr) const -> void
+		inline auto TriangleFilled(float x1, float y1, float x2, float y2, float x3, float y3, const ImU32& clr) const -> void
 		{
 			mDrawList->AddTriangleFilled(ImVec2(x1, y1), ImVec2(x2, y2), ImVec2(x3, y3), clr);
 		}
 
-		inline auto Circle(float x1, float y1, float radius, ImU32 col, int segments) const -> void
+		inline auto Circle(float x1, float y1, float radius, const ImU32& col, int segments) const -> void
 		{
 			mDrawList->AddCircle(ImVec2(x1, y1), radius, col, segments);
 		}
 
-		inline auto CircleFilled(float x1, float y1, float radius, ImU32 col, int segments) const -> void
+		inline auto CircleFilled(float x1, float y1, float radius, const ImU32& col, int segments) const -> void
 		{
 			mDrawList->AddCircleFilled(ImVec2(x1, y1), radius, col, segments);
 		}

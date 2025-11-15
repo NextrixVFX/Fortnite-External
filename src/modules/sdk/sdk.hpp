@@ -25,7 +25,7 @@ namespace PtrCache
 	// used in playercache / esp
 	inline uintptr_t GameState = 0;
 	inline uintptr_t PlayerArray = 0;
-	inline int PlayerList = 0;
+	inline uint16_t PlayerList = 0;
 
 	// used in isvisible
 	inline double LastRenderTime = FLT_MAX;
@@ -53,10 +53,11 @@ namespace sdk
 
 	inline auto GetBoneWithRotation(uintptr_t mesh, int id, int32_t playerIndex) -> Vector3
 	{
-		uintptr_t boneArray = _Memory->Read<uintptr_t>(mesh + 0x5E8); // bone array offset off uc
-		
+		uintptr_t boneArray = _Memory->Read<uintptr_t>(mesh + 0x5E8); // USkeletalMesh*
+
 		Engine::FTransform BoneTransform = _Memory->ReadBuffer<Engine::FTransform>(boneArray + id * 0x50); // size of FTransform is 0x50 (80bytes)
-		Engine::FTransform ComponentToWorld = _Memory->ReadBuffer<Engine::FTransform>(mesh + 0x1e0); // got 1e0 from memdumping
+
+		Engine::FTransform ComponentToWorld = _Memory->ReadBuffer<Engine::FTransform>(mesh + 0x1E0); // USceneComponent -> FVector bComponentToWorldUpdated
 		
 		Engine::BoneCache* boneCache = (id > 0) ? &headBoneCache : &rootBoneCache;
 		if (!boneArray)
@@ -77,7 +78,7 @@ namespace sdk
 	{
 		Engine::Camera cam;
 		
-		const Engine::tarray<uintptr_t> ViewStates = PtrCache::viewMatrix;
+		const Engine::tarray<uintptr_t> &ViewStates = PtrCache::viewMatrix;
 		if (!ViewStates.is_valid())
 			return {};
 
@@ -158,6 +159,8 @@ namespace sdk
 		if (!(_Memory = _memory.lock()))
 			return;
 
+		SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+
 		while (_Memory)
 		{
 			// https://dumpspace.spuckwaffel.com/Games/?hash=6b77eceb&type=classes&idx=UWorld
@@ -184,7 +187,7 @@ namespace sdk
 			
 			PtrCache::PlayerList = _Memory->ReadBuffer<int>(PtrCache::GameState + (Offsets::PlayerArray + sizeof(uintptr_t)));
 
-			PtrCache::LastRenderTime = _Memory->ReadBuffer<double>(PtrCache::Gworld + 0x198); // UWorld::LastRenderTime
+			PtrCache::LastRenderTime = _Memory->ReadBuffer<double>(PtrCache::Gworld + 0x190); // UWorld::LastRenderTime
 
 			PtrCache::viewMatrix = _Memory->ReadBuffer<Engine::tarray<uintptr_t>>(PtrCache::LocalPlayers + 0xD0);
 

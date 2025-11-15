@@ -17,6 +17,7 @@ public:
     inline static uintptr_t GameState = 0;
     inline static uintptr_t PlayerId = 0;
     inline static uintptr_t PlayerState = 0;
+    inline static uintptr_t TeamIndex = 0;
     inline static uintptr_t PlayerArray = 0;
     inline static uintptr_t CanBeMarkedAsTeammate = 0;
     inline static uintptr_t isDBNO = 0;
@@ -34,27 +35,28 @@ public:
 
         api.downloadContent();
 
-        UWorld = 0x17D2F6C8;// api.getOffset("OFFSET_UWORLD"); // uworld is a pointer to gworld?
+        UWorld = 0x173bdd18;// api.getOffset("OFFSET_UWORLD"); // uworld is a pointer to gworld?
         
         if (!UWorld)
             return false;
 
-        AcknowledgedPawn = 0x350;// api.getOffset("APlayerController", "AcknowledgedPawn").offset;
-        PlayerId = 0x294; // api.getOffset("APlayerState", "PlayerId").offset
-        PlayerState = 0x2b0; // api.getOffset("APawn", "PlayerState").offset;
-        Mesh = 0x328;// api.getOffset("ACharacter", "Mesh").offset;
-        RootComponent = 0x1b0;// api.getOffset("AActor", "RootComponent").offset;
-        PlayerController = 0x30;// api.getOffset("UPlayer", "PlayerController").offset;
-        LocalPlayers = 0x38;//  api.getOffset("UGameInstance", "LocalPlayers").offset;
-        OwningGameInstance = 0x248;//  api.getOffset("UWorld", "OwningGameInstance").offset;
-        PawnPrivate = 0x320;// api.getOffset("APlayerState", "PawnPrivate").offset;
-        GameState = 0x1D0;// api.getOffset("UWorld", "GameState").offset;
-        PlayerArray = 0x2C0;// api.getOffset("AGameStateBase", "PlayerArray").offset;
+        AcknowledgedPawn = 0x358; // api.getOffset("APlayerController", "AcknowledgedPawn").offset;
+        PlayerId = api.getOffset("APlayerState", "PlayerId").offset;
+        PlayerState = 0x2D0; // api.getOffset("APawn", "PlayerState").offset;
+        TeamIndex = 0x11a9; // api.getOffset("APlayerState", "TeamIndex ??").offset
+        Mesh = 0x330; //  api.getOffset("ACharacter", "Mesh").offset;
+        RootComponent = 0x1B0; // api.getOffset("AActor", "RootComponent").offset;
+        PlayerController = 0x30; // api.getOffset("UPlayer", "PlayerController").offset;
+        LocalPlayers = 0x38; // api.getOffset("UGameInstance", "LocalPlayers").offset;
+        OwningGameInstance = 0x248; //  api.getOffset("UWorld", "OwningGameInstance").offset;
+        PawnPrivate = 0x328; // api.getOffset("APlayerState", "PawnPrivate").offset;
+        GameState = 0x1d0; // api.getOffset("UWorld", "GameState").offset;
+        PlayerArray = 0x2c8;// api.getOffset("AGameStateBase", "PlayerArray").offset;
         isDBNO = 0x841; // api.getOffset("AFortPawn", "bIsDBNO").offset;
-        isABot = 0x2b2;
+        isABot = 0x2BA; // api.getOffset("AFortPawn", "bIsABot").offset;
         isDying = 0x728; // api.getOffset("AFortPawn", "bIsDying").offset;
-        CurrentWeapon = 0x990; // api.getOffset("AFortPawn", "AFortWeapon").offset;
-        NetConnection = 0x520; // api.getOffset("APlayerController", "NetConnection").offset;
+        CurrentWeapon = 0x990;// api.getOffset("AFortPawn", "AFortWeapon").offset;
+        NetConnection = 0x528; // api.getOffset("APlayerController", "NetConnection").offset;
         RotationInput = NetConnection + 0x8; // api.getOffset("UNetConnection", "SentTemporaries").offset;
 
         return true;

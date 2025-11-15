@@ -19,10 +19,7 @@ namespace features
 		}
 
 		~c_Features()
-		{
-			Esp.reset();
-			Softaim.reset();
-		}
+		{ }
 
 		inline auto onRender() -> void
 		{

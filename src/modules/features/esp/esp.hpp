@@ -52,15 +52,15 @@ namespace features
 				if (!PtrCache::Entities.Get(i, Target))
 					continue;
 
-				Vector2 Head2D = Target.HeadBonePos2D;
-				Vector2 Bottom2D = Target.RootBonePos2D;
+				const Vector2 &Head2D = Target.HeadBonePos2D;
+				const Vector2 &Bottom2D = Target.RootBonePos2D;
 
 				// draw the box
 				if (useESP && useBoxes)
 				{
 					float BoxHeight = (float)(Head2D.y - Bottom2D.y);
 					float CornerHeight = (float)abs(Head2D.y - Bottom2D.y);
-					float CornerWidth = (float)BoxHeight * 0.80f;
+					float CornerWidth = (float)BoxHeight * 0.40f;
 
 					DrawCornerBox(
 						(float)Head2D.x - (CornerWidth * 0.5f), (float)Head2D.y,
@@ -81,10 +81,9 @@ namespace features
 
 				if (useESP)
 				{
-					std::string_view Text = std::format("Player {0} : {1:.1f}m", Target.EntityIndex, Target.WorldDist * 0.01);
 					Renderer->Text(
 						ImVec2(Head2D.x, Head2D.y),
-						ImColor(255, 255, 255, 255), 1, Text,
+						ImColor(255, 255, 255, 255), 1, std::format("Player {0} : {1:.1f}m", Target.EntityIndex, Target.WorldDist * 0.01),
 						Renderer->GetFonts().m_esp
 					);
 				}
@@ -112,6 +111,8 @@ namespace features
 
 			Engine::Entity Target{};
 
+			PtrCache::Entities.Clear();
+
 			for (int i = 0; i < PtrCache::PlayerList; i++)
 			{
 				Target.PlayerState = Memory->Read<uintptr_t>(PtrCache::PlayerArray + (i * sizeof(uintptr_t)));
@@ -130,12 +131,12 @@ namespace features
 				if (!Target.Mesh)
 					continue;
 
-				Target.EntityID = Memory->ReadBuffer<int32_t>(Target.PlayerState + 0x2ac);
+				Target.EntityID = Memory->ReadBuffer<int32_t>(Target.PlayerState + Offsets::PlayerId);
 				Target.EntityIndex = i;
 
 				// Positions
 				Target.HeadBonePos3D = sdk::GetBoneWithRotation(Target.Mesh, selectedBone, Target.EntityIndex);
-				Target.RootBonePos3D = sdk::GetBoneWithRotation(Target.Mesh, 0, -1);
+				Target.RootBonePos3D = sdk::GetBoneWithRotation(Target.Mesh, 0, Target.EntityIndex);
 				Target.HeadBonePos2D = sdk::ProjectWorldToScreen(Target.HeadBonePos3D, PtrCache::vCamera);
 				Target.RootBonePos2D = sdk::ProjectWorldToScreen(Target.RootBonePos3D, PtrCache::vCamera);
 
@@ -159,7 +160,7 @@ namespace features
 					PtrCache::Target = Target;
 				}
 
-				PtrCache::Entities.Set(Target.EntityIndex, Target);
+				PtrCache::Entities.Add(Target);
 			}
 		}
 	};

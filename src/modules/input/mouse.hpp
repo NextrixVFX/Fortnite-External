@@ -86,7 +86,6 @@ namespace SerialInput
 		~c_MouseSerial()
 		{ 
 			BaudRate = 0;
-			Com.reset();
 		}
 
 		auto isConnected() -> bool

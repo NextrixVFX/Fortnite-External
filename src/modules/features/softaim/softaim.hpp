@@ -11,7 +11,7 @@ namespace features
 
 		inline auto DrawFOVCircle(const ImColor color) -> void
 		{
-			Renderer->Circle(CenterScreen.x, CenterScreen.y, gotAimFOV, color, 64);
+			Renderer->Circle(CenterScreen.x, CenterScreen.y, gotAimFOV, color, 128);
 		}
 
 	public:
@@ -36,9 +36,6 @@ namespace features
 
 		~c_Softaim()
 		{
-			Mouse.reset();
-			Memory.reset();
-			Renderer.reset();
 			isInitialized = false;
 		}
 

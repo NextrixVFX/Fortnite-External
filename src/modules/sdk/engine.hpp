@@ -299,8 +299,8 @@ namespace Engine
 		char isDowned = 0;
 		bool isVisible = false;
 
-		int32_t EntityIndex = -1;
-		int32_t EntityID = -1;
+		int16_t EntityIndex = -1;
+		int16_t EntityID = -1;
 		double WorldDist = -1.0;
 		double ScreenDist = -1.0;
 	};
@@ -308,7 +308,7 @@ namespace Engine
 	struct EntityCache
 	{
 	private:
-		std::unordered_map<int32_t, Entity> m_EntityMap;
+		std::vector<Entity> m_EntityMap;
 
 	public:
 		inline auto Size() -> size_t
@@ -316,35 +316,25 @@ namespace Engine
 			return m_EntityMap.size();
 		}
 
-		inline void Set(int32_t entityID, const Entity& entity)
+		inline auto Get(int16_t index, Entity& Target) -> bool
 		{
-			m_EntityMap[entityID] = entity;
-		}
-
-		inline bool Get(int32_t entityID, Entity& outEntity) const
-		{
-			if (m_EntityMap.empty())
+			if (index < 0 || index >= this->Size())
 				return false;
-
-			auto it = m_EntityMap.find(entityID);
-			if (it != m_EntityMap.end())
-			{
-				outEntity = it->second;
-				return true;
-			}
-
-			return false;
+			
+			Target = m_EntityMap[index];
+			
+			return true;
 		}
 
-		inline void Clear()
+		inline auto Add(const Entity& entity) -> void
+		{
+			m_EntityMap.push_back(entity);
+		}
+
+		inline auto Clear() -> void
 		{
 			if (!m_EntityMap.empty())
 				m_EntityMap.clear();
-		}
-
-		inline void Reserve(size_t count)
-		{
-			m_EntityMap.reserve(count);
 		}
 	};
 

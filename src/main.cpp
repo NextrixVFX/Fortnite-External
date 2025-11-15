@@ -19,7 +19,6 @@ auto main() -> int {
     // reading takes time so offload it to a seperate thread
     std::thread cache([&Memory]()
     {
-        SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
         sdk::RefreshCache(Memory);
     });
     
@@ -36,6 +35,8 @@ auto main() -> int {
         
         if (!Menu->isMenuInitialized || !PtrCache::Gworld)
         {
+            std::string msg = (!PtrCache::Gworld) ? encrypt("Cannot get uworld") : encrypt("Cannot init menu");
+            std::cout << msg << "\n";
             Sleep(500);
             continue;
         }
@@ -47,11 +48,6 @@ auto main() -> int {
     }
 
     cache.detach();
-
-    Menu.reset();
-    Features.reset();
-    Memory.reset();
-    Rendering.reset();
 
     std::cout << encrypt("Press enter to exit...") << std::endl;
     std::cin.get();
